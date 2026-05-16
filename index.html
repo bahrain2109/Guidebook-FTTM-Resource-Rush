@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 
   <title>FTTM Resource Rush Booklet - QR Game</title>
 
@@ -953,6 +953,82 @@
       text-shadow: 0 0 22px rgba(88, 242, 157, 0.34);
     }
 
+
+
+    /* =========================================================
+      RESPONSIVE SCREEN VIEWER
+      - Keeps the A4 design ratio on laptop, tablet, and phone.
+      - The actual print size remains A4 through @media print.
+      - JavaScript below calculates the scale so every page fits the viewport.
+    ========================================================== */
+    @media screen {
+      html,
+      body {
+        width: 100%;
+        min-height: 100%;
+        overflow-x: hidden;
+        background:
+          radial-gradient(circle at 18% 0%, rgba(79, 216, 255, 0.18), transparent 30%),
+          radial-gradient(circle at 82% 100%, rgba(255, 204, 61, 0.14), transparent 32%),
+          #05050c;
+      }
+
+      body {
+        min-height: 100svh;
+      }
+
+      .booklet {
+        --page-scale: 1;
+        --viewer-page-width: 210mm;
+        --viewer-gap: clamp(14px, 3vw, 34px);
+        display: grid;
+        justify-items: center;
+        gap: var(--viewer-gap);
+        width: 100%;
+        padding: clamp(12px, 2.6vw, 28px) 0 max(22px, env(safe-area-inset-bottom));
+      }
+
+      .page-shell {
+        position: relative;
+        width: var(--viewer-page-width);
+        height: calc(var(--viewer-page-width) * 1.4142857143);
+        flex: 0 0 auto;
+        scroll-snap-align: start;
+      }
+
+      .page {
+        position: absolute;
+        top: 0;
+        left: 50%;
+        width: 210mm;
+        height: 297mm;
+        transform: translateX(-50%) scale(var(--page-scale));
+        transform-origin: top center;
+        page-break-after: auto;
+        break-after: auto;
+        border-radius: clamp(12px, 1.8vw, 22px);
+        box-shadow:
+          0 24px 80px rgba(0, 0, 0, 0.48),
+          0 0 0 1px rgba(255, 255, 255, 0.11);
+      }
+
+      .page::after,
+      .page::before {
+        border-radius: inherit;
+      }
+
+      @media (max-width: 640px) {
+        .booklet {
+          gap: 16px;
+          padding-top: 10px;
+        }
+
+        .page {
+          border-radius: 14px;
+        }
+      }
+    }
+
     @media print {
       html,
       body {
@@ -967,7 +1043,31 @@
         padding: 0 !important;
       }
 
+
+
+      .page-shell {
+        width: 210mm !important;
+        height: 297mm !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        overflow: hidden !important;
+        page-break-after: always;
+        break-after: page;
+      }
+
+      .page-shell:last-child {
+        page-break-after: auto;
+        break-after: auto;
+      }
+
       .page {
+        position: relative !important;
+        top: auto !important;
+        left: auto !important;
+        transform: none !important;
+        transform-origin: initial !important;
+        box-shadow: none !important;
+        border-radius: 0 !important;
         width: 210mm !important;
         height: 297mm !important;
         margin: 0 !important;
@@ -981,6 +1081,7 @@
         break-after: auto;
       }
 
+      .page-shell,
       .stage-card,
       .meta-card,
       .quiz-card,
@@ -1370,7 +1471,7 @@
 
             <!-- PASTE CLOSING REMARKS HERE -->
             <p class="body-text">
-              FTTM Resource Rush bukan hanya permainan cepat, tetapi simulasi kecil tentang observasi, presisi, strategi, dan kontrol di bawah tekanan.
+              Lorem ipsum dolor sit amet, consectetur adipiscing elit. FTTM Resource Rush bukan hanya permainan cepat, tetapi simulasi kecil tentang observasi, presisi, strategi, dan kontrol di bawah tekanan.
             </p>
 
             <div class="ig-callout">
@@ -1398,5 +1499,78 @@
     </section>
 
   </main>
+
+
+  <script>
+    (function () {
+      const A4_RATIO = 297 / 210;
+      const FIT_FULL_PAGE_ON_WIDE_SCREENS = true;
+
+      function prepareResponsiveViewer() {
+        const booklet = document.querySelector(".booklet");
+        if (!booklet) return;
+
+        const pages = Array.from(booklet.querySelectorAll(":scope > .page"));
+        pages.forEach((page) => {
+          const shell = document.createElement("div");
+          shell.className = "page-shell";
+          booklet.insertBefore(shell, page);
+          shell.appendChild(page);
+        });
+      }
+
+      function setResponsiveScale() {
+        if (window.matchMedia("print").matches) return;
+
+        const booklet = document.querySelector(".booklet");
+        const firstPage = document.querySelector(".page");
+        if (!booklet || !firstPage) return;
+
+        const previousTransform = firstPage.style.transform;
+        firstPage.style.transform = "none";
+        const naturalWidth = firstPage.getBoundingClientRect().width || 794;
+        firstPage.style.transform = previousTransform;
+
+        const sidePadding = window.innerWidth <= 640 ? 20 : 48;
+        const topBottomPadding = window.innerWidth <= 640 ? 26 : 56;
+        const availableWidth = Math.max(260, window.innerWidth - sidePadding);
+        const availableHeight = Math.max(420, window.innerHeight - topBottomPadding);
+
+        let targetWidth = Math.min(availableWidth, naturalWidth);
+
+        if (FIT_FULL_PAGE_ON_WIDE_SCREENS && window.innerWidth >= 820) {
+          targetWidth = Math.min(targetWidth, availableHeight / A4_RATIO);
+        }
+
+        const scale = targetWidth / naturalWidth;
+
+        booklet.style.setProperty("--page-scale", String(scale));
+        booklet.style.setProperty("--viewer-page-width", `${targetWidth}px`);
+      }
+
+      function init() {
+        prepareResponsiveViewer();
+        setResponsiveScale();
+      }
+
+      window.addEventListener("DOMContentLoaded", init);
+      window.addEventListener("resize", setResponsiveScale);
+      window.addEventListener("orientationchange", function () {
+        setTimeout(setResponsiveScale, 250);
+      });
+      window.addEventListener("beforeprint", function () {
+        document.querySelectorAll(".page").forEach((page) => {
+          page.style.transform = "none";
+        });
+      });
+      window.addEventListener("afterprint", function () {
+        document.querySelectorAll(".page").forEach((page) => {
+          page.style.transform = "";
+        });
+        setResponsiveScale();
+      });
+    })();
+  </script>
+
 </body>
 </html>
